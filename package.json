@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "@types/screeps": "^3.3.8"
+  },
+  "devDependencies": {
+    "screeps-jest": "^2.0.3"
   }
 }
