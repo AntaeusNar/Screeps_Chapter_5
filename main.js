@@ -1,3 +1,5 @@
+/** Screeps Chapter 5 */
+
 /** Configuration Options */
 const MY_NAME = 'AntaeusNar';
 const percentCPUtargeted = .5; //targeted usual CPU usage
