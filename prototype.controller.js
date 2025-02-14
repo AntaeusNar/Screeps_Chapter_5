@@ -207,7 +207,32 @@ Object.defineProperties(StructureController.prototype, {
     },
 });
 
-function _calcPriority() {}
+function _calcPriority(target, creep, task, workQueued = 0) {
+    // early validation checks
+    if (typeof target != 'object' || typeof creep != 'object'  || typeof task != 'string' || isNaN(workQueued)) {
+        console.log('WARNING: _calcPriority was feed the wrong kinds of things. ');
+        return ERR_INVALID_ARGS;
+    }
+    // discount double checks
+    if (creep.validWorkableTasks[task] == undefined) { return ERR_BUSY; }
+    if (!target.possibleNeededTasks[task] || target.possibleNeededTasks[task].workRequired - workQueued <= 0) {
+        return ERR_INVALID_TARGET;
+    }
+    // range and life time checks
+    let maxWork = Math.min(target.possibleNeededTasks[task].workRequired - workQueued, creep.validWorkableTasks[task].workCanDo);
+    let workSpeed = Math.ceil(maxWork/creep.validWorkableTasks[task].workSpeed);
+    let distance = target.wpos ? target.wpos.getRangeTo(creep.wpos) : target.pos.getRangeTo(creep.pos);
+    let ticksToWork = Math.ceil(distance/creep.moveSpeed + workSpeed);
+    if (ticksToWork > creep.ticksToLive) { return ERR_INVALID_TARGET; }
+    // add some bonus multipliers if the creep is a perfect match for work, and/or a perfect match for lifetime
+    let matchMultiplier = 1;
+    if (creep.validWorkableTasks[task].workCanDo == target.possibleNeededTasks[task].workRequired - workQueued) { matchMultiplier += 1; }
+    if (ticksToWork == creep.ticksToLive) { matchMultiplier += 1; }
+    // finally actually calc, it really is just a %/tick/cost * the bonus (the * 1000000 is so the number is larger then 1....)
+    let percentCompletion = Math.min(100, maxWork);
+    let result = Math.ceil(percentCompletion/ticksToWork/creep.cost * 1000000) * matchMultiplier;
+    return result;
+}
 
 /** Finds the Index of Multidimensional Array value (returns first matching value as an array of coordinates)
 * @param {Array} arr - the input array
