@@ -32,8 +32,9 @@ module.exports.loop = function() {
 
     // collect all of our owned controllers
     let controllers = _.filter(_.values(Game.structures), s => s.my && s.structureType == STRUCTURE_CONTROLLER);
+    let creepsPerController = Math.floor(targetNumberOfCreeps/controllers.length);
     for (let controller of controllers) {
-        controller.run();
+        controller.run(creepsPerController);
     }
 
 

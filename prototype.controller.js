@@ -121,7 +121,7 @@ Object.defineProperties(StructureController.prototype, {
             return this._spawns;
         }
     },
-    run: function() {
+    run: function(creepsPerController) {
         this.dispatchCreeps();
         this.runCreeps();
         this.towerRun();
