@@ -48,6 +48,14 @@ Object.defineProperties(StructureController.prototype, {
             return this._creeps;
         }
     },
+    idleCreeps: {
+        get: function() {
+            if (!this._idleCreeps) {
+                this._idleCreeps = _.filter(_.values(this.creeps), creep => creep.isIdle && !creep.spawning);
+            }
+            return this._idleCreeps;
+        }
+    },
     rooms: {
         get: function() {
             if (!this._rooms) {
@@ -115,6 +123,7 @@ Object.defineProperties(StructureController.prototype, {
     },
     run: function() {
         this.dispatchCreeps();
+        this.runCreeps();
         this.towerRun();
     },
     dispatchCreeps: function() {
@@ -129,7 +138,7 @@ Object.defineProperties(StructureController.prototype, {
         let priorityMatrix = [];
         let workQueuedMatrix = [];
         // find idleCreeps or return busy
-        idleCreeps = _.filter(_.values(this.creeps), creep => creep.isIdle && !creep.spawning);
+        idleCreeps = this.idleCreeps;
         if (!idleCreeps) { return ERR_BUSY; }
         // find workableTasks the idleCreeps can do or return busy
         idleCreeps.forEach((c) => workableTasks.push(_.keysIN(c.validWorkableTasks)));
@@ -208,6 +217,15 @@ Object.defineProperties(StructureController.prototype, {
     towerRun() {
         let towers = _.filter(this.structures, s => s.structureType == STRUCTURE_TOWER);
         for (let tower of towers) { tower.run(); }
+    },
+    runCreeps() {
+        let status = OK;
+        for (let creep of this.creeps) {
+            if (creep.run) { creep.run(); }
+            else if (creep.runRole) { creep.runRole(); }
+            else { console.log("WARNING: Creep " + creep.name + ' is neither task based or role based.'); status = ERR_INVALID_ARGS;}
+            return status;
+        }
     }
 });
 
