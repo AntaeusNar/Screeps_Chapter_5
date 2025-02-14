@@ -126,6 +126,8 @@ Object.defineProperties(StructureController.prototype, {
         let assignableTasks = [];
         let assignableCreeps = [];
         let assignableTargets = [];
+        let priorityMatrix = [];
+        let workQueuedMatrix = [];
         // find idleCreeps or return busy
         idleCreeps = _.filter(_.values(this.creeps), creep => creep.isIdle && !creep.spawning);
         if (!idleCreeps) { return ERR_BUSY; }
@@ -152,8 +154,6 @@ Object.defineProperties(StructureController.prototype, {
         // Build a 3D matrix with x as creeps, y as targets, and z as tasks
         // This matrix as a priority in each cell, and we will find that cell, the xyz, and use that to assign tasks
         // this will also build a slightly separate 2D matrix of the just the amount of work queued
-        let priorityMatrix = [];
-        let workQueuedMatrix = [];
         for (let x = 0; x < assignableCreeps.length; x++) {
             priorityMatrix[x] = [];
             for (let y = 0; y < assignableTargets.length; y++) {
