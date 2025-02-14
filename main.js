@@ -2,6 +2,8 @@
 
 require('./lib.lib');
 require('./prototype.controller');
+require('./lib.creepsTasks');
+require('./lib.creepsTasksPrototypes');
 
 /** Configuration Options */
 const MY_NAME = 'AntaeusNar';
