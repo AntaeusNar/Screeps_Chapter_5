@@ -115,14 +115,29 @@ Object.defineProperties(StructureController.prototype, {
         }
     },
     run: function() {
+        let { workableTasks, possibleTasks, possibleTargets, assignableTasks } = [];
         let idleCreeps = _.filter(_.values(this.creeps), creep => creep.isIdle && !creep.spawning);
         if (!idleCreeps) { return ERR_BUSY; }
-        let { possibleTasks, possibleTargets } = {};
+
+        idleCreeps.forEach((c) => workableTasks.push(_.keysIN(c.validWorkableTasks)));
+        if (workableTasks.length == 0) { return ERR_BUSY; }
+
         for (let room in this.rooms) {
             possibleTasks.push(...room.lookupTargetTasks().Tasks);
             possibleTargets.push(...room.lookupTargetTasks().Targets);
         }
         if (possibleTasks.length == 0 || possibleTargets.length == 0) { return ERR_INVALID_TARGET; }
+
+        possibleTasks = _.uniq(possibleTasks.flat(Infinity));
+        workableTasks = _.uniq(workableTasks.flat(Infinity));
+        assignableTasks = _.intersection(workableTasks, possibleTasks);
+        if (assignableTasks.length == 0 ) { return ERR_INVALID_TARGET; }
+
+        let assignableCreeps = idleCreeps.filter((c) => assignableTasks.some(el => _.has(c.validWorkableTasks, el)));
+        if (assignableCreeps.length == 0) { return ERR_BUSY; }
+
+        let assignableTargets = possibleTargets.filter((t) => assignableTasks.some(el => _.has(t.possibleNeededTasks, el)));
+        if (assignableTargets.length == 0) { return ERR_INVALID_TARGET; }
 
     }
 })
