@@ -115,6 +115,10 @@ Object.defineProperties(StructureController.prototype, {
         }
     },
     run: function() {
+
+
+    },
+    dispatchCreeps: function() {
         let { workableTasks, possibleTasks, possibleTargets, assignableTasks } = [];
         let idleCreeps = _.filter(_.values(this.creeps), creep => creep.isIdle && !creep.spawning);
         if (!idleCreeps) { return ERR_BUSY; }
@@ -139,5 +143,32 @@ Object.defineProperties(StructureController.prototype, {
         let assignableTargets = possibleTargets.filter((t) => assignableTasks.some(el => _.has(t.possibleNeededTasks, el)));
         if (assignableTargets.length == 0) { return ERR_INVALID_TARGET; }
 
+        // Build a 3D matrix with x as creeps, y as targets, and z as tasks
+        // This matrix as a priority in each cell, and we will find that cell, the xyz, and use that to assign tasks
+        // this will also build a slightly seperate 2D matrix of the just the amount of work queued
+        let priorityMatrix = [];
+        let workQueuedMatrix = [];
+        for (let x = 0; x < assignableCreeps.length; x++) {
+            priorityMatrix[x] = [];
+            for (let y = 0; y < assignableTargets.length; y++) {
+                priorityMatrix[x][y] = [];
+                workQueuedMatrix[y] = [];
+                for (let z = 0; z < assignableTasks.length; z++) {
+                    workQueuedMatrix[y][z] = 0;
+                    let tempPriority = _calcPriority(assignableTargets[y], assignableCreeps[x], assignableTasks[z]);
+                    if (!isNaN(tempPriority)) { priorityMatrix[x][y][z] = tempPriority; }
+                }
+            }
+        }
+
+
+        while (assignableCreeps.length > 0 && assignableTargets.length > 0) {
+            let highestPriority = priorityMatrix.flat(Infinity).reduce((a, b) => { return a > b ? a : b; });
+            if (highestPriority <= 0 ) { break; }
+            let [x, y, z] = lib.getIndexPathOf(priorityMatrix, highestPriority);
+            assignableCreeps[x].task = Task[assignableTasks[z]](assignableTargets[y]);
+            assignableCreeps.splice(x, 1);
+            priorityMatrix.splice(x, 1);
+        }
     }
 })
