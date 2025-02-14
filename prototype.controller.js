@@ -78,7 +78,6 @@ Object.defineProperties(StructureController.prototype, {
             if(!this._structures) {
               let structures = [];
               for (let room in this.rooms){
-                // TODO: filter this down to not include neutral or other owner rooms
                 structures = structures.concat(this.rooms[room].find(FIND_STRUCTURES, {
                   filter: s => (s.my == true && s.structureType != STRUCTURE_CONTROLLER) ||
                                 (s.structureType == STRUCTURE_ROAD || s.structureType == STRUCTURE_WALL || s.structureType == STRUCTURE_CONTAINER)
