@@ -1,6 +1,8 @@
 /** Screeps Chapter 5 */
 
 require('./lib.lib');
+require('./prototype.controller');
+
 /** Configuration Options */
 const MY_NAME = 'AntaeusNar';
 const percentCPUtargeted = .5; //targeted usual CPU usage
@@ -18,10 +20,18 @@ module.exports.loop = function() {
     /** Start of CPU tracking */
     let startCPU = Game.cpu.getUsed();
 
+    _memoryClean();
+
     /** Calculate the target number of creeps based on CPU usage */
     let sum = Memory.CpuData.reduce((partialSum, a) => partialSum + a, 0);
     let rollingAvg = Math.max(1, Math.floor((sum/CPUhistory)*100))/100;
     let targetNumberOfCreeps = Math.max(1, Math.floor((availableCPUperTick*percentCPUtargeted)/rollingAvg));
+
+    // collect all of our owned controllers
+    let controllers = _.filter(_.values(Game.structures), s => s.my && s.structureType == STRUCTURE_CONTROLLER);
+    for (let controller of controllers) {
+        controller.run();
+    }
 
 
     /** End of loop CPU tracking update */
@@ -32,4 +42,23 @@ module.exports.loop = function() {
         Memory.CpuData.shift();
     }
     console.log('INFO: Used CPU: ' + usedCPU + " Moving Average: " + rollingAvg + " Target # Creeps: " + targetNumberOfCreeps);
+    _pixelSale();
+}
+
+/** Memory Clean */
+function _memoryClean() {
+    for (let name in Memory.creeps) {
+        if (!Game.creeps[name]) {
+            delete Memory.creeps[name];
+            console.log('Info: Cleaning non-existing creep memory: ', name);
+        }
+    }
+}
+
+/** Pixel Sale */
+function _pixelSale() {
+    if (Game.cpu.bucket == 10000) {
+        Game.cpu.generatePixel();
+        console.log('INFO: Got a New Pixel.');
+    }
 }

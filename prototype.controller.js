@@ -114,6 +114,7 @@ Object.defineProperties(StructureController.prototype, {
         }
     },
     run: function() {
+        this.dispatchCreeps();
 
 
     },
