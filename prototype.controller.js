@@ -115,8 +115,7 @@ Object.defineProperties(StructureController.prototype, {
     },
     run: function() {
         this.dispatchCreeps();
-
-
+        this.towerRun();
     },
     dispatchCreeps: function() {
         let startCPU = Game.cpu.getUsed();
@@ -206,6 +205,10 @@ Object.defineProperties(StructureController.prototype, {
         console.log(statusMessage);
         return status;
     },
+    towerRun() {
+        let towers = _.filter(this.structures, s => s.structureType == STRUCTURE_TOWER);
+        for (let tower of towers) { tower.run(); }
+    }
 });
 
 function _calcPriority(target, creep, task, workQueued = 0) {
