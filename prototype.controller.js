@@ -114,5 +114,16 @@ Object.defineProperties(StructureController.prototype, {
             }
             return this._spawns;
         }
+    },
+    run: function() {
+        let idleCreeps = _.filter(_.values(this.creeps), creep => creep.isIdle && !creep.spawning);
+        if (!idleCreeps) { return ERR_BUSY; }
+        let { possibleTasks, possibleTargets } = {};
+        for (let room in this.rooms) {
+            possibleTasks.push(...room.lookupTargetTasks().Tasks);
+            possibleTargets.push(...room.lookupTargetTasks().Targets);
+        }
+        if (possibleTasks.length == 0 || possibleTargets.length == 0) { return ERR_INVALID_TARGET; }
+
     }
 })
