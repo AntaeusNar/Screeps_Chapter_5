@@ -1,4 +1,5 @@
 /** Prototype changes to controllers */
+require('./lib.creepsTasksPrototypes');
 
 /** Global Reset Checks */
 if(Memory.controllers == undefined) { Memory.controllers = {}; }
@@ -57,9 +58,9 @@ Object.defineProperties(StructureController.prototype, {
     rooms: {
         get: function() {
             if (!this._rooms) {
-                let rooms = {};
+                let rooms = [];
                 for (let roomName of this.activeRooms) {
-                    rooms[roomName] = Game.rooms[roomName];
+                    rooms.push(Game.rooms[roomName]);
                 }
                 this._rooms = rooms;
             }
@@ -147,7 +148,8 @@ Object.defineProperties(StructureController.prototype, {
             idleCreeps.forEach((c) => workableTasks.push(_.keysIn(c.validWorkableTasks)));
             if (workableTasks.length == 0) { return ERR_BUSY; }
             // find all the possible tasks and targets, or return invalid target
-            for (let room in this.rooms) {
+            for (let room of this.rooms) {
+                if (!_.isObject(room)) { throw new Error("Didn't get a room object....")}
                 possibleTasks.push(...room.lookupTargetTasks().Tasks);
                 possibleTargets.push(...room.lookupTargetTasks().Targets);
             }
@@ -320,7 +322,7 @@ function _calcPriority(target, creep, task, workQueued = 0) {
 * @param {number|string} k - the value to search
 * @returns {number[]} The x, y, z ... of the requested value
 */
-function _getIndexPathOf() {
+function _getIndexPathOf(arr, k) {
     // If we're not array, return null;
     if (!Array.isArray(arr)) {
     return null;
@@ -335,7 +337,7 @@ function _getIndexPathOf() {
     // Search through our current array, recursively
     // calling our getIndexPathOf with the current value.
     for (var i = 0, l = arr.length; i < l; i++) {
-        var path = this._getIndexPathOf(arr[i], k);
+        var path = _getIndexPathOf(arr[i], k);
         if (path != null) {
             // If we found the path, prepend the current index
             // and return.
