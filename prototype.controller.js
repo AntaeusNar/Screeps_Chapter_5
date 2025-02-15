@@ -144,7 +144,7 @@ Object.defineProperties(StructureController.prototype, {
             idleCreeps = this.idleCreeps;
             if (!idleCreeps || idleCreeps.length == 0) { return ERR_BUSY; }
             // find workableTasks the idleCreeps can do or return busy
-            idleCreeps.forEach((c) => workableTasks.push(_.keysIN(c.validWorkableTasks)));
+            idleCreeps.forEach((c) => workableTasks.push(_.keysIn(c.validWorkableTasks)));
             if (workableTasks.length == 0) { return ERR_BUSY; }
             // find all the possible tasks and targets, or return invalid target
             for (let room in this.rooms) {
