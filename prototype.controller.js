@@ -226,6 +226,54 @@ Object.defineProperties(StructureController.prototype, {
             else { console.log("WARNING: Creep " + creep.name + ' is neither task based or role based.'); status = ERR_INVALID_ARGS;}
             return status;
         }
+    },
+    spawnPeons(creepsPerController) {
+        let spawnPeon = false;
+        let status = OK;
+        let spawnMessage = '';
+        if (this.creeps.length > creepsPerController) { return ERR_FULL; }
+        spawnMessage = "CPU can support spawning more Creeps in " + this.name +". ";
+        let spawn = this.spawns[0];
+        let maxEnergy = spawn.room.energyAvailable;
+        if (status == OK && maxEnergy < 250) {
+            spawnMessage += 'But there is not enough energy.';
+            status = ERR_NOT_ENOUGH_ENERGY;
+        }
+        if (status == OK && spawn.spawning) {
+            spawnMessage += ' But the spawn is busy.';
+            status = ERR_BUSY;
+        }
+        if (status == OK && (this.idleCreeps == null || this.idleCreeps.length == 0)) {
+            spawnMessage += ' But there are idle creeps.';
+            status = ERR_FULL;
+        }
+        if (status != OK) {
+            if (spawn.memory.status == undefined || spawn.memory.status != spawnMessage) {
+                spawn.memory.status = spawnMessage;
+                console.log(spawnMessage);
+            }
+            return status;
+        }
+        spawnMessage += ' There is enough energy.';
+        spawnMessage += ' The spawner is ready.';
+        spawnMessage += ' There are no idle creeps.';
+        if (spawn.memory.status == undefined || spawn.memory.status != spawnMessage) {
+            spawn.memory.status = spawnMessage;
+            console.log(spawnMessage);
+        }
+        if (status == OK) {
+            let bodyUnit = [WORK, CARRY, MOVE, MOVE];
+            let bodyUnitCost = 250;
+            let bodySize = Math.min(Math.floor(maxEnergy/bodyUnitCost), 12);
+            let realBody = [];
+            for (let i = 0; i < bodySize; i++) {
+                realBody = realBody.concat(bodyUnit);
+            }
+            let name = 'Peon' + Game.time;
+            console.log('Spawning ' + name + ' with a body size of ' + realBody.length);
+            spawn.customSpawnCreep(realBody, name);
+        }
+        return status;
     }
 });
 
