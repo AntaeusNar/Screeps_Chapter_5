@@ -121,159 +121,170 @@ Object.defineProperties(StructureController.prototype, {
             return this._spawns;
         }
     },
-    run: function(creepsPerController) {
-        this.dispatchCreeps();
-        this.runCreeps();
-        this.towerRun();
-    },
-    dispatchCreeps: function() {
-        let startCPU = Game.cpu.getUsed();
-        let idleCreeps = [];
-        let workableTasks = [];
-        let possibleTasks = [];
-        let possibleTargets = [];
-        let assignableTasks = [];
-        let assignableCreeps = [];
-        let assignableTargets = [];
-        let priorityMatrix = [];
-        let workQueuedMatrix = [];
-        // find idleCreeps or return busy
-        idleCreeps = this.idleCreeps;
-        if (!idleCreeps) { return ERR_BUSY; }
-        // find workableTasks the idleCreeps can do or return busy
-        idleCreeps.forEach((c) => workableTasks.push(_.keysIN(c.validWorkableTasks)));
-        if (workableTasks.length == 0) { return ERR_BUSY; }
-        // find all the possible tasks and targets, or return invalid target
-        for (let room in this.rooms) {
-            possibleTasks.push(...room.lookupTargetTasks().Tasks);
-            possibleTargets.push(...room.lookupTargetTasks().Targets);
+    run: {
+        value: function(creepsPerController) {
+            this.dispatchCreeps();
+            this.runCreeps();
+            this.towerRun();
+            this.spawnPeon(creepsPerController);
         }
-        if (possibleTasks.length == 0 || possibleTargets.length == 0) { return ERR_INVALID_TARGET; }
-        // find the unique tasks that are possible, and workable, these are assignable
-        possibleTasks = _.uniq(possibleTasks.flat(Infinity));
-        workableTasks = _.uniq(workableTasks.flat(Infinity));
-        assignableTasks = _.intersection(workableTasks, possibleTasks);
-        if (assignableTasks.length == 0 ) { return ERR_BUSY; }
-        // make sure that we only are working with the creeps that can be assigned one of the assignableTasks
-        assignableCreeps = idleCreeps.filter((c) => assignableTasks.some(el => _.has(c.validWorkableTasks, el)));
-        if (assignableCreeps.length == 0) { return ERR_BUSY; }
-        // make sure that we are only working with the targets that can assigned one of the assignableTasks
-        assignableTargets = possibleTargets.filter((t) => assignableTasks.some(el => _.has(t.possibleNeededTasks, el)));
-        if (assignableTargets.length == 0) { return ERR_INVALID_TARGET; }
-        // Build a 3D matrix with x as creeps, y as targets, and z as tasks
-        // This matrix as a priority in each cell, and we will find that cell, the xyz, and use that to assign tasks
-        // this will also build a slightly separate 2D matrix of the just the amount of work queued
-        for (let x = 0; x < assignableCreeps.length; x++) {
-            priorityMatrix[x] = [];
-            for (let y = 0; y < assignableTargets.length; y++) {
-                priorityMatrix[x][y] = [];
-                workQueuedMatrix[y] = [];
-                for (let z = 0; z < assignableTasks.length; z++) {
-                    workQueuedMatrix[y][z] = 0;
-                    let tempPriority = _calcPriority(assignableTargets[y], assignableCreeps[x], assignableTasks[z]);
-                    priorityMatrix[x][y][z] = !isNaN(tempPriority) ? tempPriority : ERR_INVALID_ARGS;
+    },
+    dispatchCreeps: {
+        value: function() {
+            let startCPU = Game.cpu.getUsed();
+            let idleCreeps = [];
+            let workableTasks = [];
+            let possibleTasks = [];
+            let possibleTargets = [];
+            let assignableTasks = [];
+            let assignableCreeps = [];
+            let assignableTargets = [];
+            let priorityMatrix = [];
+            let workQueuedMatrix = [];
+            // find idleCreeps or return busy
+            idleCreeps = this.idleCreeps;
+            if (!idleCreeps) { return ERR_BUSY; }
+            // find workableTasks the idleCreeps can do or return busy
+            idleCreeps.forEach((c) => workableTasks.push(_.keysIN(c.validWorkableTasks)));
+            if (workableTasks.length == 0) { return ERR_BUSY; }
+            // find all the possible tasks and targets, or return invalid target
+            for (let room in this.rooms) {
+                possibleTasks.push(...room.lookupTargetTasks().Tasks);
+                possibleTargets.push(...room.lookupTargetTasks().Targets);
+            }
+            if (possibleTasks.length == 0 || possibleTargets.length == 0) { return ERR_INVALID_TARGET; }
+            // find the unique tasks that are possible, and workable, these are assignable
+            possibleTasks = _.uniq(possibleTasks.flat(Infinity));
+            workableTasks = _.uniq(workableTasks.flat(Infinity));
+            assignableTasks = _.intersection(workableTasks, possibleTasks);
+            if (assignableTasks.length == 0 ) { return ERR_BUSY; }
+            // make sure that we only are working with the creeps that can be assigned one of the assignableTasks
+            assignableCreeps = idleCreeps.filter((c) => assignableTasks.some(el => _.has(c.validWorkableTasks, el)));
+            if (assignableCreeps.length == 0) { return ERR_BUSY; }
+            // make sure that we are only working with the targets that can assigned one of the assignableTasks
+            assignableTargets = possibleTargets.filter((t) => assignableTasks.some(el => _.has(t.possibleNeededTasks, el)));
+            if (assignableTargets.length == 0) { return ERR_INVALID_TARGET; }
+            // Build a 3D matrix with x as creeps, y as targets, and z as tasks
+            // This matrix as a priority in each cell, and we will find that cell, the xyz, and use that to assign tasks
+            // this will also build a slightly separate 2D matrix of the just the amount of work queued
+            for (let x = 0; x < assignableCreeps.length; x++) {
+                priorityMatrix[x] = [];
+                for (let y = 0; y < assignableTargets.length; y++) {
+                    priorityMatrix[x][y] = [];
+                    workQueuedMatrix[y] = [];
+                    for (let z = 0; z < assignableTasks.length; z++) {
+                        workQueuedMatrix[y][z] = 0;
+                        let tempPriority = _calcPriority(assignableTargets[y], assignableCreeps[x], assignableTasks[z]);
+                        priorityMatrix[x][y][z] = !isNaN(tempPriority) ? tempPriority : ERR_INVALID_ARGS;
+                    }
                 }
             }
-        }
 
-        // Assign highest priority tasks to creeps, until there are no creeps or the highest priority is <= 0 (err_message)
-        let counts = {
-            success: 0,
-            creeps: assignableCreeps.length,
-            targets: assignableTargets.length,
-            tasks: assignableTasks.length,
-            assignedTasks: [],
-        };
-        let status = OK;
-        while (assignableCreeps.length > 0) {
-            // find highest priority, if it is <= 0 there is nothing to be done and we break
-            let highestPriority = priorityMatrix.flat(Infinity).reduce((a, b) => { return a > b ? a : b; });
-            if (highestPriority <= 0 ) { status = highestPriority; break; }
-            // find where the highest priority was in the 3D matrix, this tells us the creep, target, and task combo
-            let [x, y, z] = _getIndexPathOf(priorityMatrix, highestPriority);
-            // assign to the creep, add the work that creep will do to the workQueuedMatrix
-            assignableCreeps[x].task = Task[assignableTasks[z]](assignableTargets[y]);
-            workQueuedMatrix[y][z] += assignableCreeps[x][assignableTasks[z]].workCanDo;
-            // remove the creep from assignableCreeps (loop tracking) and the priorityMatrix
-            assignableCreeps.splice(x, 1);
-            priorityMatrix.splice(x, 1);
-            // update that specific task/target combo priority for all remaining creeps
-            for (let a = 0; a < assignableCreeps.length; a++) {
-                let tempPriority = _calcPriority(assignableTargets[y], assignableCreeps[a], assignableTasks[z], workQueuedMatrix[y],[z]);
-                priorityMatrix[a][y][z] = !isNaN(tempPriority) ? tempPriority : ERR_INVALID_ARGS;
-            }
-            counts.success += 1;
-            counts.assignedTasks.push(assignableTasks[z]);
-        };
-        counts.assignedTasks = _.uniq(counts.assignedTasks);
-        let usedCPU = Game.cpu.getUsed() - startCPU;
-        let statusMessage = "INFO: " + this.name + " used " + usedCPU + " CPU to assign "
-            + counts.assignedTasks.length + ' tasks across ' + counts.creeps + ' creeps and '
-            + counts.targets + ' targets from ' + counts.tasks + ' total actionable tasks. '
-            + 'The Assigned tasks where: ' + counts.assignedTasks;
-        console.log(statusMessage);
-        return status;
-    },
-    towerRun() {
-        let towers = _.filter(this.structures, s => s.structureType == STRUCTURE_TOWER);
-        for (let tower of towers) { tower.run(); }
-    },
-    runCreeps() {
-        let status = OK;
-        for (let creep of this.creeps) {
-            if (creep.run) { creep.run(); }
-            else if (creep.runRole) { creep.runRole(); }
-            else { console.log("WARNING: Creep " + creep.name + ' is neither task based or role based.'); status = ERR_INVALID_ARGS;}
+            // Assign highest priority tasks to creeps, until there are no creeps or the highest priority is <= 0 (err_message)
+            let counts = {
+                success: 0,
+                creeps: assignableCreeps.length,
+                targets: assignableTargets.length,
+                tasks: assignableTasks.length,
+                assignedTasks: [],
+            };
+            let status = OK;
+            while (assignableCreeps.length > 0) {
+                // find highest priority, if it is <= 0 there is nothing to be done and we break
+                let highestPriority = priorityMatrix.flat(Infinity).reduce((a, b) => { return a > b ? a : b; });
+                if (highestPriority <= 0 ) { status = highestPriority; break; }
+                // find where the highest priority was in the 3D matrix, this tells us the creep, target, and task combo
+                let [x, y, z] = _getIndexPathOf(priorityMatrix, highestPriority);
+                // assign to the creep, add the work that creep will do to the workQueuedMatrix
+                assignableCreeps[x].task = Task[assignableTasks[z]](assignableTargets[y]);
+                workQueuedMatrix[y][z] += assignableCreeps[x][assignableTasks[z]].workCanDo;
+                // remove the creep from assignableCreeps (loop tracking) and the priorityMatrix
+                assignableCreeps.splice(x, 1);
+                priorityMatrix.splice(x, 1);
+                // update that specific task/target combo priority for all remaining creeps
+                for (let a = 0; a < assignableCreeps.length; a++) {
+                    let tempPriority = _calcPriority(assignableTargets[y], assignableCreeps[a], assignableTasks[z], workQueuedMatrix[y],[z]);
+                    priorityMatrix[a][y][z] = !isNaN(tempPriority) ? tempPriority : ERR_INVALID_ARGS;
+                }
+                counts.success += 1;
+                counts.assignedTasks.push(assignableTasks[z]);
+            };
+            counts.assignedTasks = _.uniq(counts.assignedTasks);
+            let usedCPU = Game.cpu.getUsed() - startCPU;
+            let statusMessage = "INFO: " + this.name + " used " + usedCPU + " CPU to assign "
+                + counts.assignedTasks.length + ' tasks across ' + counts.creeps + ' creeps and '
+                + counts.targets + ' targets from ' + counts.tasks + ' total actionable tasks. '
+                + 'The Assigned tasks where: ' + counts.assignedTasks;
+            console.log(statusMessage);
             return status;
         }
     },
-    spawnPeons(creepsPerController) {
-        let spawnPeon = false;
-        let status = OK;
-        let spawnMessage = '';
-        if (this.creeps.length > creepsPerController) { return ERR_FULL; }
-        spawnMessage = "CPU can support spawning more Creeps in " + this.name +". ";
-        let spawn = this.spawns[0];
-        let maxEnergy = spawn.room.energyAvailable;
-        if (status == OK && maxEnergy < 250) {
-            spawnMessage += 'But there is not enough energy.';
-            status = ERR_NOT_ENOUGH_ENERGY;
+    towerRun: {
+        value: function() {
+            let towers = _.filter(this.structures, s => s.structureType == STRUCTURE_TOWER);
+            for (let tower of towers) { tower.run(); }
         }
-        if (status == OK && spawn.spawning) {
-            spawnMessage += ' But the spawn is busy.';
-            status = ERR_BUSY;
+    },
+    runCreeps: {
+        value: function() {
+            let status = OK;
+            if (this.creeps.length == 0) {return ERR_BUSY; }
+            for (let creep in this.creeps) {
+                if (creep.run) { creep.run(); }
+                else if (creep.runRole) { creep.runRole(); }
+                else { console.log("WARNING: Creep " + creep.name + ' is neither task based or role based.'); status = ERR_INVALID_ARGS;}
+                return status;
+            }
         }
-        if (status == OK && (this.idleCreeps == null || this.idleCreeps.length == 0)) {
-            spawnMessage += ' But there are idle creeps.';
-            status = ERR_FULL;
-        }
-        if (status != OK) {
+    },
+    spawnPeons: {
+        value: function(creepsPerController) {
+            let status = OK;
+            let spawnMessage = '';
+            if (this.creeps.length > creepsPerController) { return ERR_FULL; }
+            spawnMessage = "CPU can support spawning more Creeps in " + this.name +". ";
+            let spawn = this.spawns[0];
+            let maxEnergy = spawn.room.energyAvailable;
+            if (status == OK && maxEnergy < 250) {
+                spawnMessage += 'But there is not enough energy.';
+                status = ERR_NOT_ENOUGH_ENERGY;
+            }
+            if (status == OK && spawn.spawning) {
+                spawnMessage += ' But the spawn is busy.';
+                status = ERR_BUSY;
+            }
+            if (status == OK && (this.idleCreeps == null || this.idleCreeps.length == 0)) {
+                spawnMessage += ' But there are idle creeps.';
+                status = ERR_FULL;
+            }
+            if (status != OK) {
+                if (spawn.memory.status == undefined || spawn.memory.status != spawnMessage) {
+                    spawn.memory.status = spawnMessage;
+                    console.log(spawnMessage);
+                }
+                return status;
+            }
+            spawnMessage += ' There is enough energy.';
+            spawnMessage += ' The spawner is ready.';
+            spawnMessage += ' There are no idle creeps.';
             if (spawn.memory.status == undefined || spawn.memory.status != spawnMessage) {
                 spawn.memory.status = spawnMessage;
                 console.log(spawnMessage);
             }
+            if (status == OK) {
+                let bodyUnit = [WORK, CARRY, MOVE, MOVE];
+                let bodyUnitCost = 250;
+                let bodySize = Math.min(Math.floor(maxEnergy/bodyUnitCost), 12);
+                let realBody = [];
+                for (let i = 0; i < bodySize; i++) {
+                    realBody = realBody.concat(bodyUnit);
+                }
+                let name = 'Peon' + Game.time;
+                console.log('Spawning ' + name + ' with a body size of ' + realBody.length);
+                spawn.customSpawnCreep(realBody, name);
+            }
             return status;
         }
-        spawnMessage += ' There is enough energy.';
-        spawnMessage += ' The spawner is ready.';
-        spawnMessage += ' There are no idle creeps.';
-        if (spawn.memory.status == undefined || spawn.memory.status != spawnMessage) {
-            spawn.memory.status = spawnMessage;
-            console.log(spawnMessage);
-        }
-        if (status == OK) {
-            let bodyUnit = [WORK, CARRY, MOVE, MOVE];
-            let bodyUnitCost = 250;
-            let bodySize = Math.min(Math.floor(maxEnergy/bodyUnitCost), 12);
-            let realBody = [];
-            for (let i = 0; i < bodySize; i++) {
-                realBody = realBody.concat(bodyUnit);
-            }
-            let name = 'Peon' + Game.time;
-            console.log('Spawning ' + name + ' with a body size of ' + realBody.length);
-            spawn.customSpawnCreep(realBody, name);
-        }
-        return status;
     }
 });
 
