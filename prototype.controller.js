@@ -1,5 +1,6 @@
 /** Prototype changes to controllers */
 require('./lib.creepsTasksPrototypes');
+const Task = require('./lib.creepsTasks');
 
 /** Global Reset Checks */
 if(Memory.controllers == undefined) { Memory.controllers = {}; }
