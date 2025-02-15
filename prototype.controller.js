@@ -5,7 +5,7 @@ if(Memory.controllers == undefined) { Memory.controllers = {}; }
 
 Object.defineProperties(StructureController.prototype, {
     memory: {
-        get: function() { return Memory.controllers[this.name] || {}; },
+        get: function() { return Memory.controllers[this.name] = Memory.controllers[this.name] || {}; },
         set: function(value) { Memory.controllers[this.name] = value; }
     },
     name: {
@@ -15,10 +15,11 @@ Object.defineProperties(StructureController.prototype, {
         get: function() {
             if(!this.memory.roomList) {
                 let rooms = _roomMapper(this.name, 9, false, true);
+                if (rooms == undefined) { throw new Error('rooms are undefined.'); }
                 this.memory.roomList = rooms.toString();
+                if (this.memory.roomList == undefined) { throw new Error('this.memory.roomList is undefined.'); }
             }
-            let roomArray = this.memory.roomList;
-            return roomArray.split(',');
+            return this.memory.roomList.split(',');
         }
     },
     activeRooms: {
@@ -30,7 +31,6 @@ Object.defineProperties(StructureController.prototype, {
                 }
                 this._activeRooms = activeRooms;
             }
-
             return this._activeRooms;
         }
     },
@@ -65,7 +65,7 @@ Object.defineProperties(StructureController.prototype, {
                 }
                 this._rooms = rooms;
             }
-            return this.rooms;
+            return this._rooms;
         }
     },
     flags: {
@@ -237,7 +237,7 @@ Object.defineProperties(StructureController.prototype, {
             }
         }
     },
-    spawnPeons: {
+    spawnPeon: {
         value: function(creepsPerController) {
             let status = OK;
             let spawnMessage = '';
@@ -442,3 +442,9 @@ function _getRoomType(roomName) {
         return ROOM_STANDARD
     }
 }
+
+global.ROOM_STANDARD = 		       'room'
+global.ROOM_SOURCE_KEEPER =	       'source_keeper'
+global.ROOM_CENTER =		       'center'
+global.ROOM_HIGHWAY = 		       'highway'
+global.ROOM_CROSSROAD = 	       'highway_portal'
