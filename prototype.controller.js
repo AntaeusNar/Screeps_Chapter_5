@@ -15,9 +15,7 @@ Object.defineProperties(StructureController.prototype, {
         get: function() {
             if(!this.memory.roomList) {
                 let rooms = _roomMapper(this.name, 9, false, true);
-                if (rooms == undefined) { throw new Error('rooms are undefined.'); }
                 this.memory.roomList = rooms.toString();
-                if (this.memory.roomList == undefined) { throw new Error('this.memory.roomList is undefined.'); }
             }
             return this.memory.roomList.split(',');
         }
@@ -110,12 +108,13 @@ Object.defineProperties(StructureController.prototype, {
     spawns: {
         get: function() {
             if (!this._spawns) {
-                let spawns = {};
+                let spawns = [];
                 for (let spawn in Game.spawns) {
                     if (this.activeRooms.includes(Game.spawns[spawn].room.name)) {
-                        spawns[spawn] = Game.spawns[spawn];
+                        spawns.push(Game.spawns[spawn]);
                     }
                 }
+                if (spawns == undefined) { throw new Error('No spawns found for controller ' + this.name); }
                 this._spawns = spawns;
             }
             return this._spawns;
@@ -143,7 +142,7 @@ Object.defineProperties(StructureController.prototype, {
             let workQueuedMatrix = [];
             // find idleCreeps or return busy
             idleCreeps = this.idleCreeps;
-            if (!idleCreeps) { return ERR_BUSY; }
+            if (!idleCreeps || idleCreeps.length == 0) { return ERR_BUSY; }
             // find workableTasks the idleCreeps can do or return busy
             idleCreeps.forEach((c) => workableTasks.push(_.keysIN(c.validWorkableTasks)));
             if (workableTasks.length == 0) { return ERR_BUSY; }
@@ -230,11 +229,12 @@ Object.defineProperties(StructureController.prototype, {
             let status = OK;
             if (this.creeps.length == 0) {return ERR_BUSY; }
             for (let creep in this.creeps) {
+                if (creep.spawning) { continue; }
                 if (creep.run) { creep.run(); }
                 else if (creep.runRole) { creep.runRole(); }
                 else { console.log("WARNING: Creep " + creep.name + ' is neither task based or role based.'); status = ERR_INVALID_ARGS;}
-                return status;
             }
+            return status;
         }
     },
     spawnPeon: {
@@ -253,7 +253,7 @@ Object.defineProperties(StructureController.prototype, {
                 spawnMessage += ' But the spawn is busy.';
                 status = ERR_BUSY;
             }
-            if (status == OK && (this.idleCreeps == null || this.idleCreeps.length == 0)) {
+            if (status == OK && (this.idleCreeps.length != 0)) {
                 spawnMessage += ' But there are idle creeps.';
                 status = ERR_FULL;
             }
