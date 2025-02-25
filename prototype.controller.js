@@ -37,10 +37,11 @@ Object.defineProperties(StructureController.prototype, {
     creeps: {
         get: function() {
             if (!this._creeps) {
-                let creeps = {};
+                let creeps = [];
                 for (let name in Game.creeps) {
-                    if (this.activeRooms.includes(Game.creeps[name].room.name)) {
-                        creeps[name] = Game.creeps[name];
+                    let creep = (Game.creeps[name]);
+                    if (this.activeRooms.includes(creep.room.name)) {
+                        creeps.push(creep);
                     }
                 }
                 this._creeps = creeps;
@@ -51,7 +52,14 @@ Object.defineProperties(StructureController.prototype, {
     idleCreeps: {
         get: function() {
             if (!this._idleCreeps) {
-                this._idleCreeps = _.filter(_.values(this.creeps), creep => creep.isIdle && !creep.spawning);
+                let idleCreeps = [];
+                for (let creep of this.creeps) {
+                    if (creep.isIdle) {
+                        idleCreeps.push(creep);
+                    }
+                }
+                console.log("Idle Creeps " + idleCreeps.length)
+                this._idleCreeps = idleCreeps;
             }
             return this._idleCreeps;
         }
@@ -230,9 +238,9 @@ Object.defineProperties(StructureController.prototype, {
     runCreeps: {
         value: function() {
             let status = OK;
-            if (this.creeps.length == 0) {return ERR_BUSY; }
+            if (!this.creeps || this.creeps == undefined || this.creeps.length == 0 || this.creeps.length == undefined) { return ERR_BUSY; }
             for (let creep in this.creeps) {
-                if (creep.spawning) { continue; }
+                if (creep.spawning || creep.isIdle) { continue; }
                 if (creep.run) { creep.run(); }
                 else if (creep.runRole) { creep.runRole(); }
                 else { console.log("WARNING: Creep " + creep.name + ' is neither task based or role based.'); status = ERR_INVALID_ARGS;}

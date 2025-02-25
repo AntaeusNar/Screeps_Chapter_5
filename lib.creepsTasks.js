@@ -1117,6 +1117,7 @@ Object.defineProperty(Creep.prototype, 'task', {
         this._task = null;
     },
 });
+
 Creep.prototype.run = function () {
     if (this.task) {
         return this.task.run();
@@ -1134,6 +1135,7 @@ Object.defineProperties(Creep.prototype, {
         }
     }
 });
+
 // RoomObject prototypes ===============================================================================================
 Object.defineProperty(RoomObject.prototype, 'ref', {
     get: function () {
